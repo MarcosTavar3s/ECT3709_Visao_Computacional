@@ -1,5 +1,6 @@
 from PIL import Image
 import gradio as gr
+import numpy as np
 import cv2
 
 escalas_de_cores = ["RGB", "BGR", "HSV", "Gray", "LAB", "HLS", "YCrCB"]
@@ -16,8 +17,23 @@ def visibilidade_escala():
 def visibilidade_espaco():
     return gr.update(visible=True), gr.update(visible=True),  gr.update(visible=True)
 
-def funcao_translacao():
-    pass
+def funcao_translacao(img, deslocamento_x, deslocamento_y):
+    if deslocamento_x > img.shape[1] or deslocamento_y > img.shape[0]:
+        gr.Warning("O deslocamento vai além da dimensão da imagem", duration=5)
+        return None, gr.update(value=None), gr.update(value=None)
+    
+    if img is not None:
+        imagem_transladada = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        matriz_translacao = np.float32([[1, 0, deslocamento_x],  # → controla eixo X  
+                                [0, 1, deslocamento_y]]) # → controla eixo Y  
+        
+        imagem_transladada = cv2.warpAffine(imagem_transladada, matriz_translacao, (imagem_transladada.shape[1], imagem_transladada.shape[0]))
+        
+        return imagem_transladada, gr.update(value=None), gr.update(value=None)
+        
+    gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
+    return None, gr.update(value=None), gr.update(value=None)
+
 
 def funcao_rotacao(img, angulo):
     if img is not None:    
@@ -41,8 +57,12 @@ with gr.Blocks() as demo:
     gr.Markdown("***")
     gr.Markdown("O programa foi desenvolvido por Marcos Aurélio para a disciplina de Visão Computacional - ECT3709")
     
-    
-    imagem = gr.Image(type="numpy", label="Faça o upload da imagem aqui!")  
+    with gr.Row():
+        # Imagem carregada pelo usuário-------------------------------------------------------------------------------------------------
+        imagem = gr.Image(type="numpy", label="Faça o upload da imagem aqui!")  
+        # Imagem após a operação--------------------------------------------------------------------------------------------------------
+        imagem_final = gr.Image(label="Resultado", interactive=False, show_download_button=True)
+        
     
     # Botoes de efeitos
     gr.Markdown("<br>")
@@ -60,8 +80,8 @@ with gr.Blocks() as demo:
             
             # Translação----------------------------------------------------------------------------------------------------------------
             translacao = gr.Button(value="Translação")
-            translacao_x_text = gr.Textbox(label="Deslocamento Horizontal",visible=False, interactive=True)
-            translacao_y_text = gr.Textbox(label="Deslocamento Vertical",visible=False, interactive=True)
+            translacao_x = gr.Number(maximum=4096, label="Deslocamento Horizontal",visible=False, interactive=True)
+            translacao_y = gr.Number(maximum=4096, label="Deslocamento Vertical",visible=False, interactive=True)
         
             enviar_translacao = gr.Button(value="Aplicar operação", visible=False)
             # voltar_menu_transformacoes_geometricas = gr.Button("Voltar", visible=False)
@@ -77,8 +97,7 @@ with gr.Blocks() as demo:
             escala_y_novo = gr.Textbox(label="Nova Altura",visible=False, interactive=True)
             
             enviar_escala = gr.Button(value="Aplicar operação", visible=False)
-            
-            
+                     
         with gr.Column():
             gr.Markdown("### Operações de Cor")
             
@@ -91,9 +110,7 @@ with gr.Blocks() as demo:
             espaco_destino = gr.Dropdown(choices=escalas_de_cores, visible=False, interactive=True)
             
             enviar_espaco = gr.Button(value="Aplicar operação", visible=False)
-            # voltar_menu_conversao_cores = gr.Button("Voltar", visible=False)
-
-            
+            # voltar_menu_conversao_cores = gr.Button("Voltar", visible=False)      
         
         with gr.Column():
             gr.Markdown("### Correção Gama e Clareamento")
@@ -101,21 +118,20 @@ with gr.Blocks() as demo:
             enviar_gama = gr.Button(value="Aplicar operação")
 
 
-        # Imagem após a operação--------------------------------------------------------------------------------------------------------
-        imagem_final = gr.Image(label="Resultado", interactive=False, show_download_button=True)
-
         # Interatividade dos grandes blocos
         # Propriedades Geometricas------------------------------------------------------------------------------------------------------
-        translacao.click(fn=visibilidade_translacao, outputs=[rotacao, escala, translacao_x_text, translacao_y_text, enviar_translacao])
+        translacao.click(fn=visibilidade_translacao, outputs=[rotacao, escala, translacao_x, translacao_y, enviar_translacao])
         rotacao.click(fn=visibilidade_rotacao, outputs=[translacao, escala, rotacao_slider, enviar_rotacao])
         escala.click(fn=visibilidade_escala, outputs=[translacao, rotacao, escala_x_novo, escala_y_novo, enviar_escala])
         
         # Operações de cor--------------------------------------------------------------------------------------------------------------
         conversao_espacos.click(fn=visibilidade_espaco, outputs=[espaco_origem, espaco_destino, enviar_espaco])
         
-        # Aplicação das operaçõe
-        enviar_rotacao.click(fn=funcao_rotacao, inputs=[imagem, rotacao_slider], outputs=[imagem_final], )
-
+        # Aplicação das operações
+        enviar_translacao.click(fn=funcao_translacao, inputs=[imagem, translacao_x, translacao_y], outputs=[imagem_final, translacao_x, translacao_y])
+        enviar_rotacao.click(fn=funcao_rotacao, inputs=[imagem, rotacao_slider], outputs=[imagem_final])
+        
+        
 demo.launch()
 
 """
