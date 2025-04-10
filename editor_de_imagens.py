@@ -34,7 +34,6 @@ def funcao_translacao(img, deslocamento_x, deslocamento_y):
     gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
     return None, gr.update(value=None), gr.update(value=None)
 
-
 def funcao_rotacao(img, angulo):
     if img is not None:    
         altura, largura = img.shape[:2]
@@ -50,6 +49,15 @@ def funcao_rotacao(img, angulo):
     gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
     return None
     
+def funcao_gama(img, gamma):
+    if img is not None:
+        imagem_gamma = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        imagem_gamma = np.power(imagem_gamma/255., gamma)
+        
+        return imagem_gamma, gr.update(value=None)
+        
+    gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
+    return None
     
 with gr.Blocks() as demo:
     # Apresentação do aplicativo web
@@ -115,7 +123,7 @@ with gr.Blocks() as demo:
         with gr.Column():
             gr.Markdown("### Correção Gama e Clareamento")
             correcao_gama = gr.Slider(minimum=0.1, maximum=3.0, label="Valor de Gamma", interactive=True)
-            enviar_gama = gr.Button(value="Aplicar operação")
+            enviar_gamma = gr.Button(value="Aplicar operação")
 
 
         # Interatividade dos grandes blocos
@@ -128,8 +136,14 @@ with gr.Blocks() as demo:
         conversao_espacos.click(fn=visibilidade_espaco, outputs=[espaco_origem, espaco_destino, enviar_espaco])
         
         # Aplicação das operações
+        # Propriedades Geometricas------------------------------------------------------------------------------------------------------
         enviar_translacao.click(fn=funcao_translacao, inputs=[imagem, translacao_x, translacao_y], outputs=[imagem_final, translacao_x, translacao_y])
         enviar_rotacao.click(fn=funcao_rotacao, inputs=[imagem, rotacao_slider], outputs=[imagem_final])
+        
+        # Operações de cor--------------------------------------------------------------------------------------------------------------
+        
+        # Gamma--------------------------------------------------------------------------------------------------------------------------
+        enviar_gamma.click(fn=funcao_gama, inputs=[imagem, correcao_gama], outputs=[imagem_final, correcao_gama])
         
         
 demo.launch()
