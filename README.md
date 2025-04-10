@@ -1,1 +1,1 @@
-# ECT3709---Vis-o-Computacional
+# ECT3709 -- Visão Computacional
