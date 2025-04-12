@@ -5,60 +5,91 @@ import cv2
 
 escalas_de_cores = ["RGB", "BGR", "HSV", "Gray", "LAB", "HLS", "YCrCB"]
 
-def visibilidade_translacao():
-    return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True),  gr.update(visible=True)
-
-def visibilidade_rotacao():
-    return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)
-
-def visibilidade_escala():
-    return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True),  gr.update(visible=True)
-
-def visibilidade_espaco():
-    return gr.update(visible=True), gr.update(visible=True),  gr.update(visible=True)
+def envia(img, translacao_x, translacao_y, rotacao_slider, ajuste_contraste_slider, correcao_gama, espaco_destino, escala_x_novo, escala_y_novo):
+    if img is not None:
+        # Pré-operação: normalização da imagem    
+        # img = (img - np.min(img))/(np.max(img) - np.min(img))
+        
+        if translacao_x or translacao_y:
+            img = funcao_translacao(img, translacao_x, translacao_y)
+            
+        if rotacao_slider:
+            img = funcao_rotacao(img, rotacao_slider)
+            
+        if ajuste_contraste_slider:
+            img = funcao_contraste(img, ajuste_contraste_slider)
+            
+        if correcao_gama:
+            img = funcao_gama(img, correcao_gama)
+            
+        if escala_x_novo and escala_y_novo:
+            img = funcao_escala(img, escala_x_novo, escala_y_novo)
+    
+        if espaco_destino != "RGB":
+            img = funcao_conversao_cores(img, espaco_destino)
+            
+        return img, gr.update(value=None), gr.update(value=None), gr.update(value=0), gr.update(value=1), gr.update(value=1), gr.update(value="RGB"), gr.update(value=None), gr.update(value=None)
+    
+    gr.Warning("A imagem não foi carregada corretamente! Tente novamente!")
+    return None
 
 def funcao_translacao(img, deslocamento_x, deslocamento_y):
-    if deslocamento_x > img.shape[1] or deslocamento_y > img.shape[0]:
-        gr.Warning("O deslocamento vai além da dimensão da imagem", duration=5)
+    if int(deslocamento_x) > img.shape[1] or int(deslocamento_y) > img.shape[0]:
+        gr.Warning("O deslocamento vai além da dimensão da imagem! Operação não executada", duration=5)
         return None, gr.update(value=None), gr.update(value=None)
     
-    if img is not None:
-        imagem_transladada = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        matriz_translacao = np.float32([[1, 0, deslocamento_x],  # → controla eixo X  
-                                [0, 1, deslocamento_y]]) # → controla eixo Y  
-        
-        imagem_transladada = cv2.warpAffine(imagem_transladada, matriz_translacao, (imagem_transladada.shape[1], imagem_transladada.shape[0]))
-        
-        return imagem_transladada, gr.update(value=None), gr.update(value=None)
-        
-    gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
-    return None, gr.update(value=None), gr.update(value=None)
+    matriz_translacao = np.float32([[1, 0, deslocamento_x],  # → controla eixo X  
+                            [0, 1, deslocamento_y]]) # → controla eixo Y  
+    
+    imagem_transladada = cv2.warpAffine(img, matriz_translacao, (img.shape[1], img.shape[0]))
+    
+    return imagem_transladada
 
 def funcao_rotacao(img, angulo):
-    if img is not None:    
-        altura, largura = img.shape[:2]
-        centro = (largura//2, altura//2)
-        escala = 1.0 
-        matriz_rotacao = cv2.getRotationMatrix2D(centro, angulo, escala)
-        imagem_rotacionada = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    altura, largura = img.shape[:2]
+    centro = (largura//2, altura//2)
+    escala = 1.0 
+    matriz_rotacao = cv2.getRotationMatrix2D(centro, angulo, escala)
         
-        imagem_rotacionada = cv2.warpAffine(imagem_rotacionada, matriz_rotacao, (largura, altura))
-        
-        return imagem_rotacionada
+    imagem_rotacionada = cv2.warpAffine(img, matriz_rotacao, (largura, altura))
     
-    gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
-    return None
+    return imagem_rotacionada
     
 def funcao_gama(img, gamma):
-    if img is not None:
-        imagem_gamma = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        imagem_gamma = np.power(imagem_gamma/255., gamma)
+    imagem_gamma = (255*np.power(img/255., gamma)).astype(np.uint8)
+    return imagem_gamma
         
-        return imagem_gamma, gr.update(value=None)
-        
-    gr.Warning("Não foi anexada nenhuma imagem!", duration=5)
-    return None
+def funcao_contraste(img, ajuste_contraste):   
+    img_contraste = (ajuste_contraste * img).astype(np.uint8)
+    print(img_contraste)
+    return img_contraste
+
+def funcao_escala(img, x_novo, y_novo):
+    try:
+        x_novo = int(x_novo)
+        y_novo = int(y_novo)
+        img = cv2.resize(img, (x_novo, y_novo))
+    except:
+        gr.Warning("Atributo inválido para redimensionar a imagem, coloque números inteiros!")
+    return img
+
+def funcao_conversao_cores(img, espaco_destino):
     
+    if espaco_destino == "BGR":
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    elif espaco_destino == "HSV":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    elif espaco_destino == "Gray":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    elif espaco_destino == "LAB":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    elif espaco_destino == "HLS":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    elif espaco_destino == "YrCrCB":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+        
+    return img
+
 with gr.Blocks() as demo:
     # Apresentação do aplicativo web
     gr.Markdown("# Bem-vind@ ao seu editor de imagem web :)")
@@ -71,81 +102,49 @@ with gr.Blocks() as demo:
         # Imagem após a operação--------------------------------------------------------------------------------------------------------
         imagem_final = gr.Image(label="Resultado", interactive=False, show_download_button=True)
         
-    
     # Botoes de efeitos
     gr.Markdown("<br>")
-    gr.Markdown("## Escolha uma operação para ser aplicada na imagem")
+    gr.Markdown("## Parâmetros de edição")
     gr.Markdown("***")
-    
-    # Aplica todas as operações de uma vez
-    # enviar_todos = gr.Button(value="Aplicar todas as operações")
-    # gr.Markdown("***")
-    
+        
     
     with gr.Row():    
-        with gr.Column():
-            gr.Markdown("### Operações Geométricas")
-            
+        with gr.Column():            
             # Translação----------------------------------------------------------------------------------------------------------------
-            translacao = gr.Button(value="Translação")
-            translacao_x = gr.Number(maximum=4096, label="Deslocamento Horizontal",visible=False, interactive=True)
-            translacao_y = gr.Number(maximum=4096, label="Deslocamento Vertical",visible=False, interactive=True)
+            gr.Markdown("### Translação")
+            translacao_x = gr.Number(maximum=4096, label="Deslocamento Horizontal", interactive=True)
+            translacao_y = gr.Number(maximum=4096, label="Deslocamento Vertical", interactive=True)
         
-            enviar_translacao = gr.Button(value="Aplicar operação", visible=False)
-            # voltar_menu_transformacoes_geometricas = gr.Button("Voltar", visible=False)
-
             # Rotação-------------------------------------------------------------------------------------------------------------------                    
-            rotacao = gr.Button(value="Rotação")
-            rotacao_slider = gr.Slider(minimum=0, maximum=360, label="Valor do ângulo", visible=False, interactive=True)
-            enviar_rotacao = gr.Button(value="Aplicar operação", visible=False)
+            gr.Markdown("### Rotação")
+            rotacao_slider = gr.Slider(minimum=0, maximum=360, label="Valor do ângulo", interactive=True)
             
-            # Escala-------------------------------------------------------------------------------------------------------------------                    
-            escala = gr.Button(value="Escala")
-            escala_x_novo = gr.Textbox(label="Nova Largura",visible=False, interactive=True)
-            escala_y_novo = gr.Textbox(label="Nova Altura",visible=False, interactive=True)
-            
-            enviar_escala = gr.Button(value="Aplicar operação", visible=False)
                      
         with gr.Column():
-            gr.Markdown("### Operações de Cor")
+            # Escala-------------------------------------------------------------------------------------------------------------------                    
+            gr.Markdown("#### Escala")
+            escala_x_novo = gr.Textbox(label="Nova Largura", interactive=True)
+            escala_y_novo = gr.Textbox(label="Nova Altura", interactive=True)
+            
+            gr.Markdown("### Ajuste de Contraste")
             
             # Ajuste de Contraste------------------------------------------------------------------------------------------------------    
-            ajuste_contraste_slider = gr.Slider(label="Ajuste de Contraste")
+            ajuste_contraste_slider = gr.Slider(value=1, minimum=0, maximum=3,label="Ajuste de Contraste")
+            
+        with gr.Column():
+            # Correção Gama e Clareamento------------------------------------------------------------------------------------------------------
+            gr.Markdown("### Correção Gama e Clareamento")
+            correcao_gama = gr.Slider(value=1, minimum=0.1, maximum=3.0, label="Valor de Gamma", interactive=True)
             
             # Conversão de Espaços------------------------------------------------------------------------------------------------------
-            conversao_espacos = gr.Button(value="Conversão de Espaços")
-            espaco_origem = gr.Dropdown(choices=escalas_de_cores, visible=False, interactive=True)
-            espaco_destino = gr.Dropdown(choices=escalas_de_cores, visible=False, interactive=True)
+            gr.Markdown("### Conversão de Espaços")
+            espaco_destino = gr.Dropdown(choices=escalas_de_cores, interactive=True)
             
-            enviar_espaco = gr.Button(value="Aplicar operação", visible=False)
-            # voltar_menu_conversao_cores = gr.Button("Voltar", visible=False)      
-        
-        with gr.Column():
-            gr.Markdown("### Correção Gama e Clareamento")
-            correcao_gama = gr.Slider(minimum=0.1, maximum=3.0, label="Valor de Gamma", interactive=True)
-            enviar_gamma = gr.Button(value="Aplicar operação")
-
-
-        # Interatividade dos grandes blocos
-        # Propriedades Geometricas------------------------------------------------------------------------------------------------------
-        translacao.click(fn=visibilidade_translacao, outputs=[rotacao, escala, translacao_x, translacao_y, enviar_translacao])
-        rotacao.click(fn=visibilidade_rotacao, outputs=[translacao, escala, rotacao_slider, enviar_rotacao])
-        escala.click(fn=visibilidade_escala, outputs=[translacao, rotacao, escala_x_novo, escala_y_novo, enviar_escala])
-        
-        # Operações de cor--------------------------------------------------------------------------------------------------------------
-        conversao_espacos.click(fn=visibilidade_espaco, outputs=[espaco_origem, espaco_destino, enviar_espaco])
-        
-        # Aplicação das operações
-        # Propriedades Geometricas------------------------------------------------------------------------------------------------------
-        enviar_translacao.click(fn=funcao_translacao, inputs=[imagem, translacao_x, translacao_y], outputs=[imagem_final, translacao_x, translacao_y])
-        enviar_rotacao.click(fn=funcao_rotacao, inputs=[imagem, rotacao_slider], outputs=[imagem_final])
-        
-        # Operações de cor--------------------------------------------------------------------------------------------------------------
-        
-        # Gamma--------------------------------------------------------------------------------------------------------------------------
-        enviar_gamma.click(fn=funcao_gama, inputs=[imagem, correcao_gama], outputs=[imagem_final, correcao_gama])
-        
-        
+    # Aplica todas as operações de uma vez
+    enviar_todos = gr.Button(value="Aplicar todas as operações")
+    enviar_todos.click(fn=envia, inputs=[imagem, translacao_x, translacao_y, rotacao_slider, ajuste_contraste_slider, correcao_gama, espaco_destino, escala_x_novo, escala_y_novo],
+                       outputs=[imagem_final, translacao_x, translacao_y, rotacao_slider, ajuste_contraste_slider, correcao_gama, espaco_destino, escala_x_novo, escala_y_novo])
+    
 demo.launch()
 
 """
