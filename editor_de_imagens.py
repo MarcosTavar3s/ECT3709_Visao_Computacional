@@ -61,7 +61,6 @@ def funcao_gama(img, gamma):
         
 def funcao_contraste(img, ajuste_contraste):   
     img_contraste = (ajuste_contraste * img).astype(np.uint8)
-    print(img_contraste)
     return img_contraste
 
 def funcao_escala(img, x_novo, y_novo):
