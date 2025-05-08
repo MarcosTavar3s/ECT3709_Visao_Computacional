@@ -31,11 +31,11 @@ def leaky_relu(z):
 def def_function(name_function:str):
   name_function = name_function.lower()
 
-  if(name_function == "r"):
+  if(name_function == "relu"):
     name_function = lambda z: relu(z)
-  elif(name_function == "s"):
+  elif(name_function == "sigmoid"):
     name_function = lambda z: sigmoid(z)
-  elif(name_function == "t"):
+  elif(name_function == "tanh"):
     name_function = lambda z: tanh(z)
   else:
     name_function = lambda z: leaky_relu(z)
@@ -49,18 +49,22 @@ def test(inputs, weights1, bias1, weights2, bias2, y_true, act_function1, act_fu
   bias1 = bias1.astype(float)
   weights2 = weights2.astype(float)
   bias2 = bias2.astype(float)
-  y_true = y_true.astype(float)
-
+  y_true = float(y_true)
+  
+  # Definicao das funções de ativação
+  act_function1 = def_function(act_function1)
+  act_function2 = def_function(act_function2)
+  
   # first layer (2 neuronios)
-  print(inputs.shape)
-  print(weights1.shape)
   h_linear = weights1 @ inputs + bias1
-  h = sigmoid(h_linear)
-
+  h = act_function1(h_linear)
 
   # second layer - output (1 neuronio)
-  y_predict = sigmoid(weights2 @ h + bias2)
-  print(h, y_predict)
+  y_predict = act_function2(weights2 @ h + bias2)
+  
+  # medição do erro
+  error = (y_predict-y_true) ** 2
+  print(error)
 
 def main():
   inputs = np.array([[1], [2]])
@@ -153,7 +157,7 @@ with gr.Blocks() as demo:
     
   
     with gr.Row():
-      y_true = gr.Textbox(label="Resultado esperado")
+      y_true = gr.Number(label="Resultado esperado")
       
     with gr.Row():
       y_predict = gr.Text(value="", visible=False)
