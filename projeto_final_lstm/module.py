@@ -180,22 +180,22 @@ class classifier_model(tf.keras.Model):
         video_reader.release()
         video_writer.release()
 
-        def train(self, epochs, file="./model.weights.h5", model_path=None, validation_split=0.2, patience=10, best_weights=True, batch_size=4, resume=False, last_epoch=0):
+    def train(self, epochs, file="./model.weights.h5", model_path=None, validation_split=0.2, patience=10, best_weights=True, batch_size=4, resume=False, last_epoch=0):
 
-            print(file)
-            early_stopping_callback = EarlyStopping(monitor="val_loss", patience=patience, mode="min", restore_best_weights=best_weights)
-            self.model.compile(loss="categorical_crossentropy", optimizer="Adam", metrics=["accuracy", Precision(name="precision"), Recall(name="recall")])
+        print(file)
+        early_stopping_callback = EarlyStopping(monitor="val_loss", patience=patience, mode="min", restore_best_weights=best_weights)
+        self.model.compile(loss="categorical_crossentropy", optimizer="Adam", metrics=["accuracy", Precision(name="precision"), Recall(name="recall")])
 
-            # checkpoint = ModelCheckpoint(
-            #     filepath=file,
-            #     monitor='val_loss',
-            #     save_best_only=True,
-            #     mode='min',
-            #     save_weights_only=True
-            # )
+        # checkpoint = ModelCheckpoint(
+        #     filepath=file,
+        #     monitor='val_loss',
+        #     save_best_only=True,
+        #     mode='min',
+        #     save_weights_only=True
+        # )
 
-            self.model_history = self.model.fit(x=self.features_train, y=self.labels_train, epochs=epochs,
-                                                batch_size=batch_size, validation_split=validation_split, callbacks=[early_stopping_callback])
+        self.model_history = self.model.fit(x=self.features_train, y=self.labels_train, epochs=epochs,
+                                            batch_size=batch_size, validation_split=validation_split, callbacks=[early_stopping_callback])
 
 
     def save_architecture_image(self, path):
