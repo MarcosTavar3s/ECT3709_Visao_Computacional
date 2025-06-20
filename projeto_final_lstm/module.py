@@ -146,15 +146,15 @@ class classifier_model(tf.keras.Model):
         # summary of the model
         self.model.summary()
 
-    def predict(self, video_file_path, output_file_path="/output_video.mp4"):
+    def predict(self, video_file_path, output_file_path="./output_video.mp4"):
         video_reader = cv2.VideoCapture(video_file_path)
         original_width = int(video_reader.get(cv2.CAP_PROP_FRAME_WIDTH))
         original_height = int(video_reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        video_writer = cv2.VideoWriter(output_file_path, cv2.VideoWriter_fourcc('M','P','4','V'),
+        video_writer = cv2.VideoWriter(output_file_path, cv2.VideoWriter_fourcc(*"mp4v"),
                                     video_reader.get(cv2.CAP_PROP_FPS), (original_width, original_height))
 
-        frames_queue = deque()
+        frames_queue = deque(maxlen=self.SEQUENCE_LENGTH)
 
         predicted_class = ""
 
@@ -180,7 +180,7 @@ class classifier_model(tf.keras.Model):
         video_reader.release()
         video_writer.release()
 
-    def train(self, epochs, file="./model.weights.h5", model_path=None, validation_split=0.2, patience=10, best_weights=True, batch_size=4, resume=False, last_epoch=0):
+    def train(self, epochs, file="./model.weights.h5", model_path=None, validation_split=0.15, patience=10, best_weights=True, batch_size=4, resume=False, last_epoch=0):
 
         print(file)
         early_stopping_callback = EarlyStopping(monitor="val_loss", patience=patience, mode="min", restore_best_weights=best_weights)
@@ -198,6 +198,10 @@ class classifier_model(tf.keras.Model):
                                             batch_size=batch_size, validation_split=validation_split, callbacks=[early_stopping_callback])
 
 
+    def load_model(self,path):
+        self.model = tf.keras.models.load_model(path)
+        print("Model loaded successfully :)")
+        
     def save_architecture_image(self, path):
         try:
             path = os.path.join(path, "architecture.png")
@@ -205,7 +209,7 @@ class classifier_model(tf.keras.Model):
         except Exception as e:
             print(f"Error: {e}")
 
-    def save_model(self, path="/"):
+    def save_model(self, path="./"):
         path = os.path.join(path, "model.keras")
 
         try:
