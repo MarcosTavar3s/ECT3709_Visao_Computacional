@@ -146,7 +146,7 @@ class classifier_model(tf.keras.Model):
         # summary of the model
         self.model.summary()
 
-    def predict(self, video_file_path, output_file_path):
+    def predict(self, video_file_path, output_file_path="/output_video.mp4"):
         video_reader = cv2.VideoCapture(video_file_path)
         original_width = int(video_reader.get(cv2.CAP_PROP_FRAME_WIDTH))
         original_height = int(video_reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -164,19 +164,19 @@ class classifier_model(tf.keras.Model):
             if not ret:
                 break
 
-            resized_frame = cv2.resize(frame, (self.HEIGHT, self.WIDTH))
+            resized_frame = cv2.resize(frame, (self.IMAGE_HEIGHT, self.IMAGE_WIDTH))
             normalized_frame = resized_frame/255.0
 
             frames_queue.append(normalized_frame)
 
             if len(frames_queue) == self.SEQUENCE_LENGTH:
-                labels_probabilities = self.model.predict()
+                labels_probabilities = self.model.predict(np.expand_dims(frames_queue, axis=0))[0]
                 predicted_label = np.argmax(labels_probabilities)
                 predicted_class = self.CLASSES_LIST[predicted_label]
 
             cv2.putText(frame, predicted_class, (10,30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0,255,0), 2)
             video_writer.write(frame)
-
+        
         video_reader.release()
         video_writer.release()
 
